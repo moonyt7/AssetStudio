@@ -63,6 +63,11 @@ namespace AssetStudio.GUI
             toolStripMenuItem19 = new System.Windows.Forms.ToolStripMenuItem();
             specifyAIVersion = new System.Windows.Forms.ToolStripComboBox();
             showExpOpt = new System.Windows.Forms.ToolStripMenuItem();
+            fixAtlasOnExport = new System.Windows.Forms.ToolStripMenuItem();
+            fixAtlasPreferResample = new System.Windows.Forms.ToolStripMenuItem();
+            fixAtlasFolderMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            toolStripSeparator14 = new System.Windows.Forms.ToolStripSeparator();
+            toolStripSeparator15 = new System.Windows.Forms.ToolStripSeparator();
             modelToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             exportAllObjectssplitToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             exportSelectedObjectsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -265,7 +270,7 @@ namespace AssetStudio.GUI
             // 
             // optionsToolStripMenuItem
             // 
-            optionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { displayAll, toolStripSeparator10, enablePreview, enableModelPreview, modelsOnly, toolStripSeparator11, displayInfo, enableResolveDependencies, allowDuplicates, skipContainer, toolStripSeparator12, toolStripMenuItem14, specifyUnityCNKey, toolStripSeparator13, toolStripMenuItem18, toolStripMenuItem19, showExpOpt });
+            optionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { displayAll, toolStripSeparator10, enablePreview, enableModelPreview, modelsOnly, toolStripSeparator11, displayInfo, enableResolveDependencies, allowDuplicates, skipContainer, toolStripSeparator12, toolStripMenuItem14, specifyUnityCNKey, toolStripSeparator13, toolStripMenuItem18, toolStripMenuItem19, showExpOpt, toolStripSeparator14, fixAtlasOnExport, fixAtlasPreferResample });
             optionsToolStripMenuItem.Name = "optionsToolStripMenuItem";
             optionsToolStripMenuItem.Size = new System.Drawing.Size(61, 20);
             optionsToolStripMenuItem.Text = "Options";
@@ -420,6 +425,29 @@ namespace AssetStudio.GUI
             showExpOpt.Size = new System.Drawing.Size(225, 22);
             showExpOpt.Text = "Export options";
             showExpOpt.Click += showExpOpt_Click;
+            // 
+            // toolStripSeparator14
+            // 
+            toolStripSeparator14.Name = "toolStripSeparator14";
+            toolStripSeparator14.Size = new System.Drawing.Size(222, 6);
+            // 
+            // fixAtlasOnExport
+            // 
+            fixAtlasOnExport.CheckOnClick = true;
+            fixAtlasOnExport.Name = "fixAtlasOnExport";
+            fixAtlasOnExport.Size = new System.Drawing.Size(291, 22);
+            fixAtlasOnExport.Text = "Fix Spine atlas size after export";
+            fixAtlasOnExport.ToolTipText = "After a batch export, make every *.atlas \'size:\' line agree with the real texture pixel size.\r\nUnity resizes texture pages to power-of-two on import, which breaks libGDX style runtimes.";
+            fixAtlasOnExport.CheckedChanged += fixAtlasOnExport_CheckedChanged;
+            // 
+            // fixAtlasPreferResample
+            // 
+            fixAtlasPreferResample.CheckOnClick = true;
+            fixAtlasPreferResample.Name = "fixAtlasPreferResample";
+            fixAtlasPreferResample.Size = new System.Drawing.Size(291, 22);
+            fixAtlasPreferResample.Text = "Atlas fix: resample texture (do not scale atlas)";
+            fixAtlasPreferResample.ToolTipText = "Unchecked (default): when the page was scaled by the same factor on both axes,\r\nthe atlas numbers are scaled instead - the texture is left untouched.\r\nChecked: always resample the texture to the size declared in the atlas.";
+            fixAtlasPreferResample.CheckedChanged += fixAtlasPreferResample_CheckedChanged;
             // 
             // modelToolStripMenuItem
             // 
@@ -734,7 +762,7 @@ namespace AssetStudio.GUI
             // 
             // miscToolStripMenuItem
             // 
-            miscToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { MapNameComboBox, buildMapToolStripMenuItem, buildBothToolStripMenuItem, clearMapToolStripMenuItem, toolStripSeparator7, assetMapNameTextBox, buildAssetMapToolStripMenuItem, assetMapTypeMenuItem, toolStripSeparator8, loadAIToolStripMenuItem, loadCABMapToolStripMenuItem, assetBrowserToolStripMenuItem });
+            miscToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] { MapNameComboBox, buildMapToolStripMenuItem, buildBothToolStripMenuItem, clearMapToolStripMenuItem, toolStripSeparator7, assetMapNameTextBox, buildAssetMapToolStripMenuItem, assetMapTypeMenuItem, toolStripSeparator8, loadAIToolStripMenuItem, loadCABMapToolStripMenuItem, assetBrowserToolStripMenuItem, toolStripSeparator15, fixAtlasFolderMenuItem });
             miscToolStripMenuItem.Name = "miscToolStripMenuItem";
             miscToolStripMenuItem.Size = new System.Drawing.Size(47, 20);
             miscToolStripMenuItem.Text = "Misc.";
@@ -817,6 +845,19 @@ namespace AssetStudio.GUI
             assetBrowserToolStripMenuItem.Size = new System.Drawing.Size(181, 22);
             assetBrowserToolStripMenuItem.Text = "Asset Browser";
             assetBrowserToolStripMenuItem.Click += loadAssetMapToolStripMenuItem_Click;
+            // 
+            // toolStripSeparator15
+            // 
+            toolStripSeparator15.Name = "toolStripSeparator15";
+            toolStripSeparator15.Size = new System.Drawing.Size(178, 6);
+            // 
+            // fixAtlasFolderMenuItem
+            // 
+            fixAtlasFolderMenuItem.Name = "fixAtlasFolderMenuItem";
+            fixAtlasFolderMenuItem.Size = new System.Drawing.Size(181, 22);
+            fixAtlasFolderMenuItem.Text = "Fix Spine atlas size in folder...";
+            fixAtlasFolderMenuItem.ToolTipText = "Pick an export folder: every *.atlas inside is checked and, if needed, made consistent with its texture.";
+            fixAtlasFolderMenuItem.Click += fixAtlasFolderMenuItem_Click;
             // 
             // assetHelpersToolStripMenuItem
             // 
@@ -1458,6 +1499,11 @@ namespace AssetStudio.GUI
         private System.Windows.Forms.ToolStripMenuItem extractFolderToolStripMenuItem;
         private System.Windows.Forms.OpenFileDialog openFileDialog1;
         private System.Windows.Forms.ToolStripMenuItem showExpOpt;
+        private System.Windows.Forms.ToolStripMenuItem fixAtlasOnExport;
+        private System.Windows.Forms.ToolStripMenuItem fixAtlasPreferResample;
+        private System.Windows.Forms.ToolStripMenuItem fixAtlasFolderMenuItem;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator14;
+        private System.Windows.Forms.ToolStripSeparator toolStripSeparator15;
         private GOHierarchy sceneTreeView;
         private System.Windows.Forms.ToolStripMenuItem debugMenuItem;
         private System.Windows.Forms.TabPage tabPage3;

@@ -609,12 +609,50 @@ namespace AssetStudio.GUI
                     Progress.Report(++i, toExportCount);
                 }
 
+                var atlasText = "";
+
+                if (Properties.Settings.Default.fixAtlasOnExport)
+                {
+                    try
+                    {
+                        var atlasOptions = new AtlasFixOptions
+                        {
+                            Direction = Properties.Settings.Default.fixAtlasPreferResample
+                                ? AtlasFixDirection.ResampleTexture
+                                : AtlasFixDirection.Auto,
+                        };
+
+                        StatusStripUpdate("Checking Spine atlas sizes ...");
+                        var atlasResults = AtlasSizeFixer.FixDirectory(savePath, atlasOptions, Logger.Info);
+                        var scaled = atlasResults.Count(r => r.Action == AtlasFixAction.AtlasScaled);
+                        var resampled = atlasResults.Count(r => r.Action == AtlasFixAction.TextureResampled);
+                        var failed = atlasResults.Count(r => r.Action == AtlasFixAction.Failed);
+
+                        if (atlasResults.Count > 0)
+                        {
+                            atlasText = $" Spine atlas: {atlasResults.Count} checked, {scaled} scaled, {resampled} texture(s) resampled";
+                            if (failed > 0)
+                            {
+                                atlasText += $", {failed} failed";
+                            }
+                            atlasText += ".";
+                            Logger.Info(atlasText.Trim());
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error($"fixing Spine atlas sizes failed:\r\n{ex.Message}");
+                    }
+                }
+
                 var statusText = exportedCount == 0 ? "Nothing exported." : $"Finished exporting {exportedCount} assets.";
 
                 if (toExportCount > exportedCount)
                 {
                     statusText += $" {toExportCount - exportedCount} assets skipped (not extractable or files already exist)";
                 }
+
+                statusText += atlasText;
 
                 StatusStripUpdate(statusText);
 

@@ -11,7 +11,57 @@ namespace AssetStudio.CLI
 {
     public class Program
     {
-        public static void Main(string[] args) => CommandLine.Init(args);
+        public static void Main(string[] args)
+        {
+            // Standalone helper, no asset loading involved:
+            //   AssetStudio.CLI.exe --fix-atlas <folder> [--check] [--resample] [--scale-atlas]
+            // Makes every *.atlas 'size:' line agree with the real texture pixel size.
+            if (args.Length >= 2 && (args[0] == "--fix-atlas" || args[0] == "-fix-atlas" || args[0] == "--fixatlas"))
+            {
+                RunAtlasFix(args);
+                return;
+            }
+
+            CommandLine.Init(args);
+        }
+
+        private static void RunAtlasFix(string[] args)
+        {
+            var folder = args[1];
+            var options = new AtlasFixOptions();
+
+            for (var i = 2; i < args.Length; i++)
+            {
+                switch (args[i])
+                {
+                    case "--check":
+                    case "--dry-run":
+                        options.DryRun = true;
+                        break;
+                    case "--resample":
+                        options.Direction = AtlasFixDirection.ResampleTexture;
+                        break;
+                    case "--scale-atlas":
+                        options.Direction = AtlasFixDirection.ScaleAtlas;
+                        break;
+                }
+            }
+
+            Console.WriteLine($"atlas fix: {(options.DryRun ? "check only" : "fixing")} '{folder}' (direction: {options.Direction})");
+
+            var results = AtlasSizeFixer.FixDirectory(folder, options, Console.WriteLine);
+
+            var scaled = results.Count(r => r.Action == AtlasFixAction.AtlasScaled);
+            var resampled = results.Count(r => r.Action == AtlasFixAction.TextureResampled);
+            var unchanged = results.Count(r => r.Action == AtlasFixAction.Unchanged);
+            var skipped = results.Count(r => r.Action == AtlasFixAction.Skipped);
+            var failed = results.Count(r => r.Action == AtlasFixAction.Failed);
+
+            Console.WriteLine($"atlas fix: {results.Count} checked, {scaled} scaled, {resampled} texture(s) resampled, " +
+                              $"{unchanged} already consistent, {skipped} skipped, {failed} failed");
+
+            Environment.ExitCode = failed > 0 ? 1 : 0;
+        }
 
         public static void Run(Options o)
         {

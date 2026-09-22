@@ -103,6 +103,8 @@ namespace AssetStudio.GUI
             enableModelPreview.Checked = Properties.Settings.Default.enableModelPreview;
             modelsOnly.Checked = Properties.Settings.Default.modelsOnly;
             enableResolveDependencies.Checked = Properties.Settings.Default.enableResolveDependencies;
+            fixAtlasOnExport.Checked = Properties.Settings.Default.fixAtlasOnExport;
+            fixAtlasPreferResample.Checked = Properties.Settings.Default.fixAtlasPreferResample;
             allowDuplicates.Checked = Properties.Settings.Default.allowDuplicates;
             skipContainer.Checked = Properties.Settings.Default.skipContainer;
             assetsManager.ResolveDependencies = enableResolveDependencies.Checked;
@@ -2079,6 +2081,67 @@ namespace AssetStudio.GUI
             Properties.Settings.Default.Save();
 
             assetsManager.ResolveDependencies = enableResolveDependencies.Checked;
+        }
+        private void fixAtlasOnExport_CheckedChanged(object sender, EventArgs e)
+        {
+            Properties.Settings.Default.fixAtlasOnExport = fixAtlasOnExport.Checked;
+            Properties.Settings.Default.Save();
+        }
+        private void fixAtlasPreferResample_CheckedChanged(object sender, EventArgs e)
+        {
+            Properties.Settings.Default.fixAtlasPreferResample = fixAtlasPreferResample.Checked;
+            Properties.Settings.Default.Save();
+        }
+        private void fixAtlasFolderMenuItem_Click(object sender, EventArgs e)
+        {
+            var dialog = new OpenFolderDialog();
+            dialog.InitialFolder = saveDirectoryBackup;
+            if (dialog.ShowDialog(this) != DialogResult.OK)
+                return;
+            saveDirectoryBackup = dialog.Folder;
+
+            var answer = MessageBox.Show(this,
+                "Yes = fix in place\r\n" +
+                "No = check only (nothing is written)\r\n" +
+                "Cancel = abort\r\n\r\n" +
+                dialog.Folder,
+                "Spine atlas size", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+            if (answer == DialogResult.Cancel)
+                return;
+
+            var options = new AtlasFixOptions
+            {
+                Direction = fixAtlasPreferResample.Checked ? AtlasFixDirection.ResampleTexture : AtlasFixDirection.Auto,
+                DryRun = answer == DialogResult.No,
+            };
+
+            Cursor = Cursors.WaitCursor;
+            try
+            {
+                var results = AtlasSizeFixer.FixDirectory(dialog.Folder, options, Logger.Info);
+                var lines = results.Select(r => r.ToString()).ToList();
+                var scaled = results.Count(r => r.Action == AtlasFixAction.AtlasScaled);
+                var resampled = results.Count(r => r.Action == AtlasFixAction.TextureResampled);
+
+                if (lines.Count == 0)
+                {
+                    lines.Add("No Spine atlas (*.atlas) found under this folder.");
+                }
+                else if (lines.Count > 26)
+                {
+                    lines = lines.Take(25).ToList();
+                    lines.Add($"... and {results.Count - 25} more (see the log / console)");
+                }
+
+                MessageBox.Show(this,
+                    $"{results.Count} atlas checked, {scaled} scaled, {resampled} texture(s) resampled" +
+                    (options.DryRun ? " (dry run)" : "") + "\r\n\r\n" + string.Join("\r\n", lines),
+                    "Spine atlas size", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            finally
+            {
+                Cursor = Cursors.Default;
+            }
         }
         private void allowDuplicates_CheckedChanged(object sender, EventArgs e)
         {

@@ -325,6 +325,30 @@ namespace AssetStudio.GUI.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool fixAtlasOnExport {
+            get {
+                return ((bool)(this["fixAtlasOnExport"]));
+            }
+            set {
+                this["fixAtlasOnExport"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool fixAtlasPreferResample {
+            get {
+                return ((bool)(this["fixAtlasPreferResample"]));
+            }
+            set {
+                this["fixAtlasPreferResample"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("1")]
         public int assetMapType {
             get {
