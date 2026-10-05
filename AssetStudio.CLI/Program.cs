@@ -22,6 +22,14 @@ namespace AssetStudio.CLI
                 return;
             }
 
+            // Loads a mixed list of folders/files the same way a multi-item drop on the GUI does:
+            //   AssetStudio.CLI.exe --load-check <path> [<path> ...]
+            if (args.Length >= 2 && (args[0] == "--load-check" || args[0] == "-load-check"))
+            {
+                RunLoadCheck(args.Skip(1).ToArray());
+                return;
+            }
+
             CommandLine.Init(args);
         }
 
@@ -61,6 +69,44 @@ namespace AssetStudio.CLI
                               $"{unchanged} already consistent, {skipped} skipped, {failed} failed");
 
             Environment.ExitCode = failed > 0 ? 1 : 0;
+        }
+
+        /// <summary>
+        /// Loads a mixed list of folders/files exactly like dropping them on the GUI does,
+        /// then reports the outcome. Used to verify the multi-folder drop fix.
+        /// </summary>
+        private static void RunLoadCheck(string[] paths)
+        {
+            Logger.Default = new ConsoleLogger();
+            Logger.Flags = LoggerEvent.All;
+
+            var manager = new AssetsManager
+            {
+                Game = GameManager.GetGame(0),
+                SpecifyUnityVersion = string.Empty,
+                ResolveDependencies = false,
+            };
+
+            Console.WriteLine($"load-check: {paths.Length} path(s)");
+            foreach (var p in paths)
+            {
+                var kind = Directory.Exists(p) ? "folder" : File.Exists(p) ? "file" : "missing";
+                Console.WriteLine($"  - [{kind}] {p}");
+            }
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            manager.LoadPaths(paths);
+            sw.Stop();
+
+            Console.WriteLine($"load-check: {manager.assetsFileList.Count} serialized file(s), " +
+                              $"{manager.LoadErrors.Count} skipped, {sw.ElapsedMilliseconds} ms");
+
+            foreach (var e in manager.LoadErrors.Take(10))
+            {
+                Console.WriteLine($"    ! {e}");
+            }
+
+            Environment.ExitCode = manager.LoadErrors.Count > 0 ? 2 : 0;
         }
 
         public static void Run(Options o)

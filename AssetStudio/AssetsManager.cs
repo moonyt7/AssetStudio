@@ -28,8 +28,17 @@ namespace AssetStudio
         internal HashSet<string> noexistFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         internal HashSet<string> assetsFileListHash = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>items skipped during the last load (unreadable files, wrong paths, ...).</summary>
+        public readonly List<string> LoadErrors = new List<string>();
+
         public void LoadFiles(params string[] files)
         {
+            if (files == null || files.Length == 0)
+            {
+                Logger.Warning("Nothing to load: no file was given.");
+                return;
+            }
+
             if (Silent)
             {
                 Logger.Silent = true;
@@ -37,6 +46,7 @@ namespace AssetStudio
             }
 
             var path = Path.GetDirectoryName(Path.GetFullPath(files[0]));
+            LoadErrors.Clear();
             MergeSplitAssets(path);
             var toReadFile = ProcessingSplitFiles(files.ToList());
             if (ResolveDependencies)
@@ -59,9 +69,92 @@ namespace AssetStudio
             }
 
             MergeSplitAssets(path, true);
+            LoadErrors.Clear();
             var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories).ToList();
             var toReadFile = ProcessingSplitFiles(files);
             Load(toReadFile);
+
+            if (Silent)
+            {
+                Logger.Silent = false;
+                Progress.Silent = false;
+            }
+        }
+
+        /// <summary>
+        /// Loads a mixed list of dropped paths: folders are expanded recursively,
+        /// plain files are taken as-is. Replaces the old "a single folder only" rule
+        /// which handed directory paths straight to File.Open when several folders
+        /// were dropped at once.
+        /// </summary>
+        public void LoadPaths(params string[] paths)
+        {
+            if (Silent)
+            {
+                Logger.Silent = true;
+                Progress.Silent = true;
+            }
+
+            LoadErrors.Clear();
+
+            var files = new List<string>();
+            var expandedFolder = false;
+
+            foreach (var path in paths)
+            {
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    continue;
+                }
+
+                if (Directory.Exists(path))
+                {
+                    expandedFolder = true;
+                    try
+                    {
+                        MergeSplitAssets(path, true);
+                        files.AddRange(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories));
+                    }
+                    catch (Exception e)
+                    {
+                        AddLoadError($"'{path}': {e.Message}");
+                        Logger.Error($"Failed to enumerate '{path}'", e);
+                    }
+                }
+                else if (File.Exists(path))
+                {
+                    files.Add(path);
+                }
+                else
+                {
+                    AddLoadError($"'{path}' does not exist.");
+                    Logger.Warning($"Skipping '{path}': it does not exist.");
+                }
+            }
+
+            if (files.Count == 0)
+            {
+                Logger.Warning("Nothing to load: no readable file was found in the given paths.");
+            }
+            else
+            {
+                if (!expandedFolder)
+                {
+                    // keep the old LoadFiles behaviour of merging .split parts found next to the files
+                    var firstDir = Path.GetDirectoryName(Path.GetFullPath(files[0]));
+                    if (!string.IsNullOrEmpty(firstDir) && Directory.Exists(firstDir))
+                    {
+                        MergeSplitAssets(firstDir);
+                    }
+                }
+
+                var toReadFile = ProcessingSplitFiles(files);
+                if (ResolveDependencies)
+                {
+                    toReadFile = AssetsHelper.ProcessDependencies(toReadFile);
+                }
+                Load(toReadFile);
+            }
 
             if (Silent)
             {
@@ -107,9 +200,42 @@ namespace AssetStudio
 
         private void LoadFile(string fullName)
         {
-            var reader = new FileReader(fullName);
-            reader = reader.PreProcessing(Game);
-            LoadFile(reader);
+            // dropping folders/files can hand us anything: guard before File.Open,
+            // opening a directory throws UnauthorizedAccessException and killed the GUI.
+            if (Directory.Exists(fullName))
+            {
+                AddLoadError($"'{fullName}' is a folder, not a file.");
+                Logger.Warning($"Skipping '{fullName}': it is a folder, not a file.");
+                return;
+            }
+
+            if (!File.Exists(fullName))
+            {
+                AddLoadError($"'{fullName}' does not exist.");
+                Logger.Warning($"Skipping '{fullName}': file does not exist.");
+                return;
+            }
+
+            try
+            {
+                var reader = new FileReader(fullName);
+                reader = reader.PreProcessing(Game);
+                LoadFile(reader);
+            }
+            catch (Exception e)
+            {
+                // one unreadable file must not abort the whole import
+                AddLoadError($"'{fullName}': {e.Message}");
+                Logger.Error($"Failed to read '{fullName}'", e);
+            }
+        }
+
+        private void AddLoadError(string message)
+        {
+            if (LoadErrors.Count < 1000)
+            {
+                LoadErrors.Add(message);
+            }
         }
 
         private void LoadFile(FileReader reader)

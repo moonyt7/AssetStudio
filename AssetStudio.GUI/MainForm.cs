@@ -205,15 +205,43 @@ namespace AssetStudio.GUI
             ResetForm();
             assetsManager.SpecifyUnityVersion = specifyUnityVersion.Text;
             assetsManager.Game = Studio.Game;
-            if (paths.Length == 1 && Directory.Exists(paths[0]))
+            try
             {
-                await Task.Run(() => assetsManager.LoadFolder(paths[0]));
+                if (paths.Length == 1 && Directory.Exists(paths[0]))
+                {
+                    await Task.Run(() => assetsManager.LoadFolder(paths[0]));
+                }
+                else
+                {
+                    // several dropped items (folders and/or files) - expand and load them together
+                    await Task.Run(() => assetsManager.LoadPaths(paths));
+                }
+                BuildAssetStructures();
+                ReportLoadErrors();
             }
-            else
+            catch (Exception ex)
             {
-                await Task.Run(() => assetsManager.LoadFiles(paths));
+                Logger.Error("Failed to load the selected paths", ex);
+                MessageBox.Show(this, ex.Message, "Failed to load", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            BuildAssetStructures();
+        }
+
+        private void ReportLoadErrors()
+        {
+            var errors = assetsManager.LoadErrors;
+            if (errors == null || errors.Count == 0)
+            {
+                return;
+            }
+
+            const int maxShown = 15;
+            var text = string.Join(Environment.NewLine, errors.Take(maxShown));
+            if (errors.Count > maxShown)
+            {
+                text += Environment.NewLine + $"... and {errors.Count - maxShown} more (see the log)";
+            }
+
+            MessageBox.Show(this, text, $"Skipped {errors.Count} item(s)", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
         private async void loadFile_Click(object sender, EventArgs e)
